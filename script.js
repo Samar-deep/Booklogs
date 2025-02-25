@@ -10,14 +10,14 @@ import {
   doc,
 } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js";
 
-// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyAiW-mzl1NRuAKG5esRxQ9LZCd0mYzbUG8",
-  authDomain: "database-12b3f.firebaseapp.com",
-  projectId: "database-12b3f",
-  storageBucket: "database-12b3f.firebasestorage.app",
-  messagingSenderId: "872186209687",
-  appId: "1:872186209687:web:c87a2fc8436d55079a90d2"
+  apiKey: "AIzaSyBzTbmSuxzvpCJF27J7I5aTPhVY36U2scs",
+  authDomain: "booksorganizer-c96ac.firebaseapp.com",
+  projectId: "booksorganizer-c96ac",
+  storageBucket: "booksorganizer-c96ac.firebasestorage.app",
+  messagingSenderId: "347259427416",
+  appId: "1:347259427416:web:01d088cc84282c7f9e482d",
+  measurementId: "G-HLCSC3Z2KM"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -163,6 +163,17 @@ document.getElementById("bioAuthBtn").addEventListener("click", async () => {
     document.getElementById("authFeedback").textContent = "WebAuthn not supported on this browser.";
   }
 });
+
+const sw = new URL('service-worker.js', import.meta.url)
+if ('serviceWorker' in navigator) {
+ const s = navigator.serviceWorker;
+ s.register(sw.href, {
+ scope: 'https://github.com/Samar-deep/Booklogs.git'
+ })
+ .then(_ => console.log('Service Worker Registered for scope:', sw.href,
+'with', import.meta.url))
+ .catch(err => console.error('Service Worker Error:', err));
+}
 
 // ===== Initial load =====
 window.addEventListener("load", loadBooks);

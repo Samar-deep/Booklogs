@@ -6,10 +6,9 @@
   <title>Book Log</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="manifest" href="manifest.json">
-  <!-- Firebase App (the core Firebase SDK) -->
-  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js"></script>
-  <!-- Add Firebase products that you want to use -->
-  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js"></script>
+<script type="module" src="script.js"></script>
+
+  
 </head>
 <body>
   <header>
@@ -71,15 +70,6 @@
     </section>
   </main>
 
-  <script src="script.js">
 
-if ('serviceWorker' in navigator) {
- navigator.serviceWorker.register('service-worker.js', {
- scope: '/https://github.com/Samar-deep/Booklogs.git/'
- })
- .then(reg => console.log('Service Worker Registered'))
- .catch(err => console.error('Service Worker Error:', err));
- }
-  </script>
 </body>
 </html>
