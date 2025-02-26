@@ -1,22 +1,32 @@
-const CACHE_NAME = 'to-do-pwa-cache-v1';
-const FILES_TO_CACHE = [
- '/https://github.com/Samar-deep/Booklogs.git/',
- '/https://github.com/Samar-deep/Booklogs.git /index.html',
- '/https://github.com/Samar-deep/Booklogs.git /style.css',
- '/https://github.com/Samar-deep/Booklogs.git /app.js',
- '/https://github.com/Samar-deep/Booklogs.git /manifest.json',
- '/https://github.com/Samar-deep/Booklogs.git /icons/icon-128.png',
- '/https://github.com/Samar-deep/Booklogs.git /icons/icon-512.png'
+const CACHE_NAME = 'book-log-cache-v1';
+const urlsToCache = [
+  './',
+  './index.html',
+  './style.css',
+  './script.js',
+  './manifest.json',
+  './icons/icon-192.png',
+  './icons/icon-512.png'
 ];
-self.addEventListener('install', (event) => {
- event.waitUntil(
- caches.open(CACHE_NAME)
- .then((cache) => cache.addAll(FILES_TO_CACHE))
- );
+
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => {
+         console.log('Opened cache');
+         return cache.addAll(urlsToCache);
+      })
+  );
 });
-self.addEventListener('fetch', (event) => {
- event.respondWith(
- caches.match(event.request)
- .then((response) => response || fetch(event.request))
- );
-});
+
+self.addEventListener('fetch', event => {
+    if (event.request.url.includes('google.firestore.googleapis.com')) {
+      // Let the network handle Firestore requests
+      return;
+    }
+    event.respondWith(
+      caches.match(event.request)
+        .then(response => response || fetch(event.request))
+    );
+  });
+  

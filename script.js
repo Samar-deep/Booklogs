@@ -1,4 +1,4 @@
-// ===== Firebase Initialization =====
+// ===== Firebase Initialization & Imports =====
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
 import {
   getFirestore,
@@ -9,13 +9,6 @@ import {
   deleteDoc,
   doc
 } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js";
-import {
-  getAuth,
-  signInWithPopup,
-  GoogleAuthProvider,
-  onAuthStateChanged,
-  signOut
-} from "https://www.gstatic.com/firebasejs/9.17.1/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBzTbmSuxzvpCJF27J7I5aTPhVY36U2scs",
@@ -30,184 +23,188 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// ===== Firebase Authentication (Google Sign-In) =====
-const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
+// ===== Wait for DOM to load =====
+document.addEventListener("DOMContentLoaded", () => {
+  // Global variables for simulated user authentication
+  let currentUserId = null; // Will be set upon successful biometric authentication
+  let userBooksCollection = null;
 
-document.getElementById("signInBtn").addEventListener("click", () => {
-  signInWithPopup(auth, provider)
-    .then((result) => {
-      console.log("Signed in as:", result.user.displayName);
-      showFeedback("Signed in successfully!");
-      // Books will load via onAuthStateChanged.
-    })
-    .catch((error) => {
-      console.error("Error during sign in:", error);
-      showFeedback("Error signing in.");
-    });
-});
-
-document.getElementById("signOutBtn").addEventListener("click", () => {
-  signOut(auth)
-    .then(() => {
-      console.log("Signed out successfully");
-      showFeedback("Signed out successfully!");
-    })
-    .catch((error) => {
-      console.error("Error signing out:", error);
-      showFeedback("Error signing out.");
-    });
-});
-
-// Global variable for the user's books collection reference
-let userBooksCollection = null;
-
-// Monitor authentication state and update UI accordingly
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    // Set the user-specific books collection reference
-    userBooksCollection = collection(db, "users", user.uid, "books");
-    
-    // Show books section and sign-out button
-    document.getElementById("books").style.display = "block";
-    document.getElementById("signInBtn").style.display = "none";
-    document.getElementById("signOutBtn").style.display = "inline-block";
-    loadBooks();
-  } else {
-    // Hide books section and show sign-in button
-    document.getElementById("books").style.display = "none";
-    document.getElementById("signInBtn").style.display = "inline-block";
-    document.getElementById("signOutBtn").style.display = "none";
-  }
-});
-
-// ===== Utility: Feedback =====
-function showFeedback(message, elementId = "feedback") {
-  const feedbackEl = document.getElementById(elementId);
-  feedbackEl.textContent = message;
-  setTimeout(() => (feedbackEl.textContent = ""), 3000);
-}
-
-// ===== CRUD Operations =====
-
-// Load books from the user's subcollection and display in the list
-async function loadBooks() {
-  if (!userBooksCollection) return;
-  const querySnapshot = await getDocs(userBooksCollection);
+  // Element references
+  const booksSection = document.getElementById("books");
+  const feedbackEl = document.getElementById("feedback");
+  const bookForm = document.getElementById("bookForm");
   const bookList = document.getElementById("bookList");
-  bookList.innerHTML = "";
-  querySnapshot.forEach((docSnapshot) => {
-    const book = docSnapshot.data();
-    book.id = docSnapshot.id;
-    const li = document.createElement("li");
-    li.innerHTML = `<strong>${book.title}</strong> by ${book.author} (Genre: ${book.genre}, Rating: ${book.rating})
-      <span>
-        <button onclick="editBook('${book.id}')">Edit</button>
-        <button onclick="deleteBook('${book.id}')">Delete</button>
-      </span>`;
-    bookList.appendChild(li);
-  });
-}
 
-// Add or update a book via the form submission
-document.getElementById("bookForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  if (!userBooksCollection) {
-    showFeedback("Please sign in first.");
-    return;
+  // Biometric elements
+  const bioRegisterBtn = document.getElementById("bioRegisterBtn");
+  const bioAuthBtn = document.getElementById("bioAuthBtn");
+  const bioFeedback = document.getElementById("bioFeedback");
+
+  // ===== Utility: Feedback =====
+  function showFeedback(message, elementId = "feedback") {
+    const el = document.getElementById(elementId);
+    if (el) {
+      el.textContent = message;
+      setTimeout(() => (el.textContent = ""), 3000);
+    }
   }
-  const bookId = document.getElementById("bookId").value;
-  const bookData = {
-    title: document.getElementById("title").value,
-    author: document.getElementById("author").value,
-    genre: document.getElementById("genre").value,
-    rating: document.getElementById("rating").value,
+
+  // ===== Simulated Authentication Handler =====
+  function onAuthenticated(userId) {
+    currentUserId = userId;
+    // Set userBooksCollection to a subcollection for the authenticated user.
+    userBooksCollection = collection(db, "users", currentUserId, "books");
+    booksSection.style.display = "block";
+    loadBooks();
+  }
+
+  // ===== CRUD Operations =====
+
+  // Load books from the user's subcollection and display them
+  async function loadBooks() {
+    if (!userBooksCollection) return;
+    const querySnapshot = await getDocs(userBooksCollection);
+    bookList.innerHTML = "";
+    querySnapshot.forEach((docSnapshot) => {
+      const book = docSnapshot.data();
+      book.id = docSnapshot.id;
+      const li = document.createElement("li");
+      li.innerHTML = `<strong>${book.title}</strong> by ${book.author} (Genre: ${book.genre}, Rating: ${book.rating})
+        <span>
+          <button class="btn-edit" onclick="editBook('${book.id}')">Edit</button>
+          <button class="btn-delete" onclick="deleteBook('${book.id}')">Delete</button>
+        </span>`;
+      bookList.appendChild(li);
+    });
+  }
+
+  // Add or update a book via form submission
+  bookForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!userBooksCollection) {
+      showFeedback("Please authenticate first.");
+      return;
+    }
+    const bookId = document.getElementById("bookId").value;
+    const bookData = {
+      title: document.getElementById("title").value,
+      author: document.getElementById("author").value,
+      genre: document.getElementById("genre").value,
+      rating: document.getElementById("rating").value,
+    };
+
+    try {
+      if (bookId) {
+        const bookDoc = doc(userBooksCollection, bookId);
+        await updateDoc(bookDoc, bookData);
+        showFeedback("Book updated successfully!");
+      } else {
+        await addDoc(userBooksCollection, bookData);
+        showFeedback("Book added successfully!");
+      }
+      bookForm.reset();
+      loadBooks();
+    } catch (error) {
+      console.error("Error writing document: ", error);
+      showFeedback("Error saving book.");
+    }
+  });
+
+  // Edit book (populate form with data for update)
+  window.editBook = async function (id) {
+    if (!userBooksCollection) return;
+    const querySnapshot = await getDocs(userBooksCollection);
+    querySnapshot.forEach((docSnapshot) => {
+      if (docSnapshot.id === id) {
+        const book = docSnapshot.data();
+        document.getElementById("bookId").value = id;
+        document.getElementById("title").value = book.title;
+        document.getElementById("author").value = book.author;
+        document.getElementById("genre").value = book.genre;
+        document.getElementById("rating").value = book.rating;
+      }
+    });
   };
 
-  try {
-    if (bookId) {
-      // Update an existing book
-      const bookDoc = doc(userBooksCollection, bookId);
-      await updateDoc(bookDoc, bookData);
-      showFeedback("Book updated successfully!");
-    } else {
-      // Add a new book
-      await addDoc(userBooksCollection, bookData);
-      showFeedback("Book added successfully!");
+  // Delete a book from the user's subcollection
+  window.deleteBook = async function (id) {
+    if (!userBooksCollection) return;
+    try {
+      await deleteDoc(doc(userBooksCollection, id));
+      showFeedback("Book deleted successfully!");
+      loadBooks();
+    } catch (error) {
+      console.error("Error deleting document: ", error);
+      showFeedback("Error deleting book.");
     }
-    document.getElementById("bookForm").reset();
-    loadBooks();
-  } catch (error) {
-    console.error("Error writing document: ", error);
-    showFeedback("Error saving book.");
-  }
-});
+  };
 
-// Edit book (populate form for update)
-window.editBook = async function (id) {
-  if (!userBooksCollection) return;
-  const querySnapshot = await getDocs(userBooksCollection);
-  querySnapshot.forEach((docSnapshot) => {
-    if (docSnapshot.id === id) {
-      const book = docSnapshot.data();
-      document.getElementById("bookId").value = id;
-      document.getElementById("title").value = book.title;
-      document.getElementById("author").value = book.author;
-      document.getElementById("genre").value = book.genre;
-      document.getElementById("rating").value = book.rating;
+  // ===== Biometric Registration (WebAuthn) =====
+  bioRegisterBtn.addEventListener("click", async () => {
+    // For demo purposes: In production, generate a secure challenge on your server.
+    const publicKeyCredentialCreationOptions = {
+      challenge: Uint8Array.from("randomChallengeForReg", c => c.charCodeAt(0)),
+      rp: {
+        name: "Book Log App",
+        id: window.location.hostname  // Use 'localhost' during development if needed.
+      },
+      user: {
+        id: Uint8Array.from("uniqueUserId", c => c.charCodeAt(0)),
+        name: "user@example.com",
+        displayName: "User"
+      },
+      pubKeyCredParams: [
+        { type: "public-key", alg: -7 },   // ES256
+        { type: "public-key", alg: -257 }  // RS256
+      ],
+      authenticatorSelection: {
+        authenticatorAttachment: "platform",
+        userVerification: "preferred"
+      },
+      timeout: 60000,
+      attestation: "none"
+    };
+
+    try {
+      const credential = await navigator.credentials.create({ publicKey: publicKeyCredentialCreationOptions });
+      console.log("Biometric registration credential:", credential);
+      bioFeedback.textContent = "Biometric registration successful!";
+      // For demo, simulate successful authentication with a dummy user id.
+      onAuthenticated("demoUser");
+    } catch (error) {
+      console.error("Biometric registration error:", error);
+      bioFeedback.textContent = "Biometric registration failed.";
     }
   });
-};
 
-// Delete book from the user's subcollection
-window.deleteBook = async function (id) {
-  if (!userBooksCollection) return;
-  try {
-    await deleteDoc(doc(userBooksCollection, id));
-    showFeedback("Book deleted successfully!");
-    loadBooks();
-  } catch (error) {
-    console.error("Error deleting document: ", error);
-    showFeedback("Error deleting book.");
-  }
-};
+  // ===== Biometric Authentication (WebAuthn) =====
+  bioAuthBtn.addEventListener("click", async () => {
+    // For demo purposes: In production, generate a secure challenge and list allowed credentials from your server.
+    const publicKeyCredentialRequestOptions = {
+      challenge: Uint8Array.from("randomChallengeForAuth", c => c.charCodeAt(0)),
+      timeout: 60000,
+      rpId: window.location.hostname,
+      userVerification: "preferred"
+    };
 
-// ===== Biometric Authentication (WebAuthn) =====
-document.getElementById("bioAuthBtn").addEventListener("click", async () => {
-  if (window.PublicKeyCredential) {
     try {
-      const credential = await navigator.credentials.get({
-        publicKey: {
-          challenge: new Uint8Array(32),
-          timeout: 60000,
-          rpId: window.location.hostname,
-          allowCredentials: [],
-          userVerification: "preferred"
-        }
-      });
-      console.log("Biometric credential obtained:", credential);
-      document.getElementById("authFeedback").textContent = "Biometric authentication successful!";
-    } catch (err) {
-      console.error("Biometric auth error:", err);
-      document.getElementById("authFeedback").textContent = "Biometric authentication failed.";
+      const assertion = await navigator.credentials.get({ publicKey: publicKeyCredentialRequestOptions });
+      console.log("Biometric authentication assertion:", assertion);
+      bioFeedback.textContent = "Biometric authentication successful!";
+      onAuthenticated("demoUser");
+    } catch (error) {
+      console.error("Biometric authentication error:", error);
+      bioFeedback.textContent = "Biometric authentication failed.";
     }
-  } else {
-    document.getElementById("authFeedback").textContent = "WebAuthn not supported on this browser.";
+  });
+
+  // ===== Service Worker Registration =====
+  const swURL = new URL('service-worker.js', import.meta.url);
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register(swURL.href, {
+      scope: '/Booklogs/'
+    })
+      .then(() => console.log('Service Worker Registered for scope:', swURL.href))
+      .catch(err => console.error('Service Worker Error:', err));
   }
-});
-
-// ===== Service Worker Registration =====
-const sw = new URL('service-worker.js', import.meta.url);
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register(sw.href, {
-    scope: 'https://github.com/Samar-deep/Booklogs.git'
-  })
-  .then(() => console.log('Service Worker Registered for scope:', sw.href))
-  .catch(err => console.error('Service Worker Error:', err));
-}
-
-// ===== Initial load =====
-window.addEventListener("load", () => {
-  // If a user is already signed in, load their books.
-  if (auth.currentUser) loadBooks();
 });

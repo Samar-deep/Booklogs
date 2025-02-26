@@ -12,14 +12,14 @@
   <header>
     <h1>My Book Log</h1>
     <nav>
-      <!-- Sign in / Sign out buttons appear in the header -->
-      <button id="signInBtn">Sign in with Google</button>
-      <button id="signOutBtn" style="display: none;">Sign Out</button>
+      <!-- Biometrics buttons moved to the top -->
+      <button id="bioRegisterBtn" class="btn-bio">Register Biometrics</button>
+      <button id="bioAuthBtn" class="btn-bio">Sign in with Biometrics</button>
     </nav>
   </header>
 
   <main>
-    <!-- Section: Book List & Form (Hidden by default) -->
+    <!-- Section: Book List & Form (Hidden by default until user authenticates) -->
     <section id="books" style="display: none;">
       <h2>Track Your Books</h2>
       <form id="bookForm">
@@ -36,7 +36,7 @@
         <label for="rating">Rating:</label>
         <input type="number" id="rating" min="1" max="5" />
 
-        <button type="submit" id="submitBtn">Add Book</button>
+        <button type="submit" id="submitBtn" class="btn-submit">Add Book</button>
       </form>
 
       <div id="feedback" role="alert"></div>
@@ -46,6 +46,10 @@
       </ul>
     </section>
 
+    <!-- Section: Biometric Feedback (Optional) -->
+    <section id="bioFeedbackSection">
+      <div id="bioFeedback" role="alert"></div>
+    </section>
   </main>
 </body>
 </html>

@@ -74,11 +74,70 @@ form input {
   align-items: center;
 }
 
+/* --- Button Styling (WCAG-friendly) --- */
+
+/* Base button style for consistency */
+button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.3s, color 0.3s;
+}
+
+/* Focus state: prominent outline for keyboard users */
+button:focus {
+  outline: 3px solid #005a9e;
+  outline-offset: 2px;
+}
+
+/* Sign In Button */
+.btn-sign-in {
+  background: #007acc;
+  color: #fff;
+}
+.btn-sign-in:hover,
+.btn-sign-in:active {
+  background: #005fa3;
+}
+
+/* Sign Out Button */
+.btn-sign-out {
+  background: #555;
+  color: #fff;
+}
+.btn-sign-out:hover,
+.btn-sign-out:active {
+  background: #444;
+}
+
+/* Edit Button */
+.btn-edit {
+  background: #4CAF50;  /* Green */
+  color: #fff;
+}
+.btn-edit:hover,
+.btn-edit:active {
+  background: #45a049;
+}
+
+/* Delete Button */
+.btn-delete {
+  background: #f44336;  /* Red */
+  color: #fff;
+}
+.btn-delete:hover,
+.btn-delete:active {
+  background: #d32f2f;
+}
+
+/* Ensure buttons inside list items have spacing */
 #bookList li button {
   margin-left: 0.5rem;
 }
 
-/* Chatbot styling */
+/* Chatbot styling (if still needed) */
 #chatWindow {
   background: #e1e1e1;
   padding: 1rem;
