@@ -29,7 +29,6 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const booksCollection = collection(db, "books");
 
 // ===== Firebase Authentication (Google Sign-In) =====
 const auth = getAuth(app);
@@ -40,7 +39,7 @@ document.getElementById("signInBtn").addEventListener("click", () => {
     .then((result) => {
       console.log("Signed in as:", result.user.displayName);
       showFeedback("Signed in successfully!");
-      // Books will load via onAuthStateChanged
+      // Books will load via onAuthStateChanged.
     })
     .catch((error) => {
       console.error("Error during sign in:", error);
@@ -60,16 +59,22 @@ document.getElementById("signOutBtn").addEventListener("click", () => {
     });
 });
 
+// Global variable for the user's books collection reference
+let userBooksCollection = null;
+
 // Monitor authentication state and update UI accordingly
 onAuthStateChanged(auth, (user) => {
   if (user) {
-    // User is signed in: show books section and sign-out button.
+    // Set the user-specific books collection reference
+    userBooksCollection = collection(db, "users", user.uid, "books");
+    
+    // Show books section and sign-out button
     document.getElementById("books").style.display = "block";
     document.getElementById("signInBtn").style.display = "none";
     document.getElementById("signOutBtn").style.display = "inline-block";
     loadBooks();
   } else {
-    // No user is signed in: hide books section, show sign-in button.
+    // Hide books section and show sign-in button
     document.getElementById("books").style.display = "none";
     document.getElementById("signInBtn").style.display = "inline-block";
     document.getElementById("signOutBtn").style.display = "none";
@@ -85,9 +90,10 @@ function showFeedback(message, elementId = "feedback") {
 
 // ===== CRUD Operations =====
 
-// Load books from Firebase and display in the list
+// Load books from the user's subcollection and display in the list
 async function loadBooks() {
-  const querySnapshot = await getDocs(booksCollection);
+  if (!userBooksCollection) return;
+  const querySnapshot = await getDocs(userBooksCollection);
   const bookList = document.getElementById("bookList");
   bookList.innerHTML = "";
   querySnapshot.forEach((docSnapshot) => {
@@ -106,6 +112,10 @@ async function loadBooks() {
 // Add or update a book via the form submission
 document.getElementById("bookForm").addEventListener("submit", async (e) => {
   e.preventDefault();
+  if (!userBooksCollection) {
+    showFeedback("Please sign in first.");
+    return;
+  }
   const bookId = document.getElementById("bookId").value;
   const bookData = {
     title: document.getElementById("title").value,
@@ -116,11 +126,13 @@ document.getElementById("bookForm").addEventListener("submit", async (e) => {
 
   try {
     if (bookId) {
-      const bookDoc = doc(db, "books", bookId);
+      // Update an existing book
+      const bookDoc = doc(userBooksCollection, bookId);
       await updateDoc(bookDoc, bookData);
       showFeedback("Book updated successfully!");
     } else {
-      await addDoc(booksCollection, bookData);
+      // Add a new book
+      await addDoc(userBooksCollection, bookData);
       showFeedback("Book added successfully!");
     }
     document.getElementById("bookForm").reset();
@@ -133,7 +145,8 @@ document.getElementById("bookForm").addEventListener("submit", async (e) => {
 
 // Edit book (populate form for update)
 window.editBook = async function (id) {
-  const querySnapshot = await getDocs(booksCollection);
+  if (!userBooksCollection) return;
+  const querySnapshot = await getDocs(userBooksCollection);
   querySnapshot.forEach((docSnapshot) => {
     if (docSnapshot.id === id) {
       const book = docSnapshot.data();
@@ -146,10 +159,11 @@ window.editBook = async function (id) {
   });
 };
 
-// Delete book from Firebase
+// Delete book from the user's subcollection
 window.deleteBook = async function (id) {
+  if (!userBooksCollection) return;
   try {
-    await deleteDoc(doc(db, "books", id));
+    await deleteDoc(doc(userBooksCollection, id));
     showFeedback("Book deleted successfully!");
     loadBooks();
   } catch (error) {
@@ -193,4 +207,7 @@ if ('serviceWorker' in navigator) {
 }
 
 // ===== Initial load =====
-window.addEventListener("load", loadBooks);
+window.addEventListener("load", () => {
+  // If a user is already signed in, load their books.
+  if (auth.currentUser) loadBooks();
+});
