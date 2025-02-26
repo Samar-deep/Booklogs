@@ -7,8 +7,15 @@ import {
   getDocs,
   updateDoc,
   deleteDoc,
-  doc,
+  doc
 } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js";
+import {
+  getAuth,
+  signInWithPopup,
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/9.17.1/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBzTbmSuxzvpCJF27J7I5aTPhVY36U2scs",
@@ -24,6 +31,51 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const booksCollection = collection(db, "books");
 
+// ===== Firebase Authentication (Google Sign-In) =====
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+
+document.getElementById("signInBtn").addEventListener("click", () => {
+  signInWithPopup(auth, provider)
+    .then((result) => {
+      console.log("Signed in as:", result.user.displayName);
+      showFeedback("Signed in successfully!");
+      // Books will load via onAuthStateChanged
+    })
+    .catch((error) => {
+      console.error("Error during sign in:", error);
+      showFeedback("Error signing in.");
+    });
+});
+
+document.getElementById("signOutBtn").addEventListener("click", () => {
+  signOut(auth)
+    .then(() => {
+      console.log("Signed out successfully");
+      showFeedback("Signed out successfully!");
+    })
+    .catch((error) => {
+      console.error("Error signing out:", error);
+      showFeedback("Error signing out.");
+    });
+});
+
+// Monitor authentication state and update UI accordingly
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    // User is signed in: show books section and sign-out button.
+    document.getElementById("books").style.display = "block";
+    document.getElementById("signInBtn").style.display = "none";
+    document.getElementById("signOutBtn").style.display = "inline-block";
+    loadBooks();
+  } else {
+    // No user is signed in: hide books section, show sign-in button.
+    document.getElementById("books").style.display = "none";
+    document.getElementById("signInBtn").style.display = "inline-block";
+    document.getElementById("signOutBtn").style.display = "none";
+  }
+});
+
 // ===== Utility: Feedback =====
 function showFeedback(message, elementId = "feedback") {
   const feedbackEl = document.getElementById(elementId);
@@ -33,7 +85,7 @@ function showFeedback(message, elementId = "feedback") {
 
 // ===== CRUD Operations =====
 
-// Load books from Firebase
+// Load books from Firebase and display in the list
 async function loadBooks() {
   const querySnapshot = await getDocs(booksCollection);
   const bookList = document.getElementById("bookList");
@@ -51,7 +103,7 @@ async function loadBooks() {
   });
 }
 
-// Add or update a book
+// Add or update a book via the form submission
 document.getElementById("bookForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const bookId = document.getElementById("bookId").value;
@@ -64,12 +116,10 @@ document.getElementById("bookForm").addEventListener("submit", async (e) => {
 
   try {
     if (bookId) {
-      // Update existing book
       const bookDoc = doc(db, "books", bookId);
       await updateDoc(bookDoc, bookData);
       showFeedback("Book updated successfully!");
     } else {
-      // Add new book
       await addDoc(booksCollection, bookData);
       showFeedback("Book added successfully!");
     }
@@ -81,9 +131,8 @@ document.getElementById("bookForm").addEventListener("submit", async (e) => {
   }
 });
 
-// Edit book (populate form)
+// Edit book (populate form for update)
 window.editBook = async function (id) {
-  const bookDoc = doc(db, "books", id);
   const querySnapshot = await getDocs(booksCollection);
   querySnapshot.forEach((docSnapshot) => {
     if (docSnapshot.id === id) {
@@ -97,7 +146,7 @@ window.editBook = async function (id) {
   });
 };
 
-// Delete book
+// Delete book from Firebase
 window.deleteBook = async function (id) {
   try {
     await deleteDoc(doc(db, "books", id));
@@ -109,45 +158,14 @@ window.deleteBook = async function (id) {
   }
 };
 
-// ===== AI Chatbot Integration =====
-
-// Dummy chatbot responses for illustration.
-// In a real-world scenario, you might integrate with an AI service API.
-document.getElementById("chatForm").addEventListener("submit", (e) => {
-  e.preventDefault();
-  const input = document.getElementById("chatInput");
-  const message = input.value.trim();
-  if (!message) return;
-  
-  addChatMessage("User", message);
-  // Simulate AI response
-  setTimeout(() => {
-    addChatMessage("AI", "Here’s a suggestion: try sorting your books by genre!");
-  }, 1000);
-  input.value = "";
-});
-
-function addChatMessage(sender, message) {
-  const chatWindow = document.getElementById("chatWindow");
-  const msgDiv = document.createElement("div");
-  msgDiv.classList.add("chat-message");
-  msgDiv.innerHTML = `<strong>${sender}:</strong> ${message}`;
-  chatWindow.appendChild(msgDiv);
-  chatWindow.scrollTop = chatWindow.scrollHeight;
-}
-
 // ===== Biometric Authentication (WebAuthn) =====
-
 document.getElementById("bioAuthBtn").addEventListener("click", async () => {
-  // Check if the browser supports WebAuthn
   if (window.PublicKeyCredential) {
     try {
-      // Note: In a production scenario, you must create proper PublicKeyCredentialRequestOptions
       const credential = await navigator.credentials.get({
         publicKey: {
           challenge: new Uint8Array(32),
           timeout: 60000,
-          // Relying party and user details would normally come from your server
           rpId: window.location.hostname,
           allowCredentials: [],
           userVerification: "preferred"
@@ -164,15 +182,14 @@ document.getElementById("bioAuthBtn").addEventListener("click", async () => {
   }
 });
 
-const sw = new URL('service-worker.js', import.meta.url)
+// ===== Service Worker Registration =====
+const sw = new URL('service-worker.js', import.meta.url);
 if ('serviceWorker' in navigator) {
- const s = navigator.serviceWorker;
- s.register(sw.href, {
- scope: 'https://github.com/Samar-deep/Booklogs.git'
- })
- .then(_ => console.log('Service Worker Registered for scope:', sw.href,
-'with', import.meta.url))
- .catch(err => console.error('Service Worker Error:', err));
+  navigator.serviceWorker.register(sw.href, {
+    scope: 'https://github.com/Samar-deep/Booklogs.git'
+  })
+  .then(() => console.log('Service Worker Registered for scope:', sw.href))
+  .catch(err => console.error('Service Worker Error:', err));
 }
 
 // ===== Initial load =====

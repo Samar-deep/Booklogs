@@ -6,25 +6,21 @@
   <title>Book Log</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="manifest" href="manifest.json">
-<script type="module" src="script.js"></script>
-
-  
+  <script type="module" src="script.js"></script>
 </head>
 <body>
   <header>
     <h1>My Book Log</h1>
     <nav>
-      <ul>
-        <li><a href="#books">Books</a></li>
-        <li><a href="#chatbot">Chatbot</a></li>
-        <li><a href="#auth">Login</a></li>
-      </ul>
+      <!-- Sign in / Sign out buttons appear in the header -->
+      <button id="signInBtn">Sign in with Google</button>
+      <button id="signOutBtn" style="display: none;">Sign Out</button>
     </nav>
   </header>
 
   <main>
-    <!-- Section: Book List & Form -->
-    <section id="books">
+    <!-- Section: Book List & Form (Hidden by default) -->
+    <section id="books" style="display: none;">
       <h2>Track Your Books</h2>
       <form id="bookForm">
         <input type="hidden" id="bookId" value="" />
@@ -50,26 +46,6 @@
       </ul>
     </section>
 
-    <!-- Section: AI Chatbot -->
-    <section id="chatbot">
-      <h2>Ask Our AI Chatbot</h2>
-      <div id="chatWindow">
-        <!-- Chat messages appear here -->
-      </div>
-      <form id="chatForm">
-        <input type="text" id="chatInput" placeholder="Ask a question..." required />
-        <button type="submit">Send</button>
-      </form>
-    </section>
-
-    <!-- Section: Biometric Authentication -->
-    <section id="auth">
-      <h2>Secure Login</h2>
-      <button id="bioAuthBtn">Login with Biometrics</button>
-      <div id="authFeedback" role="alert"></div>
-    </section>
   </main>
-
-
 </body>
 </html>
