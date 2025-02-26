@@ -9,13 +9,6 @@ import {
   deleteDoc,
   doc
 } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js";
-import {
-  getAuth,
-  signInWithPopup,
-  GoogleAuthProvider,
-  onAuthStateChanged,
-  signOut
-} from "https://www.gstatic.com/firebasejs/9.17.1/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBzTbmSuxzvpCJF27J7I5aTPhVY36U2scs",
@@ -29,71 +22,23 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
 
 // ===== Wait for DOM to load =====
 document.addEventListener("DOMContentLoaded", () => {
-  // Global variable for the user's books collection reference
+  // Global variables for simulated user authentication
+  let currentUserId = null; // Will be set upon successful biometric authentication
   let userBooksCollection = null;
 
   // Element references
-  const signInBtn = document.getElementById("signInBtn");
-  const signOutBtn = document.getElementById("signOutBtn");
   const booksSection = document.getElementById("books");
   const feedbackEl = document.getElementById("feedback");
   const bookForm = document.getElementById("bookForm");
   const bookList = document.getElementById("bookList");
 
-  // Biometric elements (new)
+  // Biometric elements
   const bioRegisterBtn = document.getElementById("bioRegisterBtn");
   const bioAuthBtn = document.getElementById("bioAuthBtn");
   const bioFeedback = document.getElementById("bioFeedback");
-
-  // ===== Authentication Event Listeners =====
-  signInBtn.addEventListener("click", () => {
-    signInWithPopup(auth, provider)
-      .then((result) => {
-        console.log("Signed in as:", result.user.displayName);
-        showFeedback("Signed in successfully!");
-        // Books will load via onAuthStateChanged.
-      })
-      .catch((error) => {
-        console.error("Error during sign in:", error);
-        showFeedback("Error signing in.");
-      });
-  });
-
-  signOutBtn.addEventListener("click", () => {
-    signOut(auth)
-      .then(() => {
-        console.log("Signed out successfully");
-        showFeedback("Signed out successfully!");
-      })
-      .catch((error) => {
-        console.error("Error signing out:", error);
-        showFeedback("Error signing out.");
-      });
-  });
-
-  // ===== Monitor Authentication State =====
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      // Set the user-specific books collection reference
-      userBooksCollection = collection(db, "users", user.uid, "books");
-
-      // Show books section and sign-out button
-      booksSection.style.display = "block";
-      signInBtn.style.display = "none";
-      signOutBtn.style.display = "inline-block";
-      loadBooks();
-    } else {
-      // Hide books section and show sign-in button
-      booksSection.style.display = "none";
-      signInBtn.style.display = "inline-block";
-      signOutBtn.style.display = "none";
-    }
-  });
 
   // ===== Utility: Feedback =====
   function showFeedback(message, elementId = "feedback") {
@@ -104,9 +49,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // ===== Simulated Authentication Handler =====
+  function onAuthenticated(userId) {
+    currentUserId = userId;
+    // Set userBooksCollection to a subcollection for the authenticated user.
+    userBooksCollection = collection(db, "users", currentUserId, "books");
+    booksSection.style.display = "block";
+    loadBooks();
+  }
+
   // ===== CRUD Operations =====
 
-  // Load books from the user's subcollection and display in the list
+  // Load books from the user's subcollection and display them
   async function loadBooks() {
     if (!userBooksCollection) return;
     const querySnapshot = await getDocs(userBooksCollection);
@@ -124,11 +78,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Add or update a book via the form submission
+  // Add or update a book via form submission
   bookForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     if (!userBooksCollection) {
-      showFeedback("Please sign in first.");
+      showFeedback("Please authenticate first.");
       return;
     }
     const bookId = document.getElementById("bookId").value;
@@ -141,12 +95,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       if (bookId) {
-        // Update an existing book
         const bookDoc = doc(userBooksCollection, bookId);
         await updateDoc(bookDoc, bookData);
         showFeedback("Book updated successfully!");
       } else {
-        // Add a new book
         await addDoc(userBooksCollection, bookData);
         showFeedback("Book added successfully!");
       }
@@ -158,7 +110,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Edit book (populate form for update)
+  // Edit book (populate form with data for update)
   window.editBook = async function (id) {
     if (!userBooksCollection) return;
     const querySnapshot = await getDocs(userBooksCollection);
@@ -174,7 +126,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   };
 
-  // Delete book from the user's subcollection
+  // Delete a book from the user's subcollection
   window.deleteBook = async function (id) {
     if (!userBooksCollection) return;
     try {
@@ -189,18 +141,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ===== Biometric Registration (WebAuthn) =====
   bioRegisterBtn.addEventListener("click", async () => {
-    // In a production app, generate a secure challenge on the server.
+    // For demo purposes: In production, generate a secure challenge on your server.
     const publicKeyCredentialCreationOptions = {
       challenge: Uint8Array.from("randomChallengeForReg", c => c.charCodeAt(0)),
       rp: {
         name: "Book Log App",
-        id: window.location.hostname
+        id: window.location.hostname  // Use 'localhost' during development if needed.
       },
       user: {
-        // In production, use a unique identifier from your backend.
         id: Uint8Array.from("uniqueUserId", c => c.charCodeAt(0)),
-        name: auth.currentUser ? auth.currentUser.email : "user@example.com",
-        displayName: auth.currentUser ? auth.currentUser.displayName : "User"
+        name: "user@example.com",
+        displayName: "User"
       },
       pubKeyCredParams: [
         { type: "public-key", alg: -7 },   // ES256
@@ -218,7 +169,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const credential = await navigator.credentials.create({ publicKey: publicKeyCredentialCreationOptions });
       console.log("Biometric registration credential:", credential);
       bioFeedback.textContent = "Biometric registration successful!";
-      // TODO: Send credential to your server to register this authenticator.
+      // For demo, simulate successful authentication with a dummy user id.
+      onAuthenticated("demoUser");
     } catch (error) {
       console.error("Biometric registration error:", error);
       bioFeedback.textContent = "Biometric registration failed.";
@@ -227,20 +179,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ===== Biometric Authentication (WebAuthn) =====
   bioAuthBtn.addEventListener("click", async () => {
-    // In a production app, generate a secure challenge on the server and provide allowedCredentials.
+    // For demo purposes: In production, generate a secure challenge and list allowed credentials from your server.
     const publicKeyCredentialRequestOptions = {
       challenge: Uint8Array.from("randomChallengeForAuth", c => c.charCodeAt(0)),
       timeout: 60000,
       rpId: window.location.hostname,
       userVerification: "preferred"
-      // allowCredentials: [ ... ] // Optionally list allowed credential IDs.
     };
 
     try {
       const assertion = await navigator.credentials.get({ publicKey: publicKeyCredentialRequestOptions });
       console.log("Biometric authentication assertion:", assertion);
       bioFeedback.textContent = "Biometric authentication successful!";
-      // TODO: Send assertion to your server for verification.
+      onAuthenticated("demoUser");
     } catch (error) {
       console.error("Biometric authentication error:", error);
       bioFeedback.textContent = "Biometric authentication failed.";
@@ -256,7 +207,4 @@ document.addEventListener("DOMContentLoaded", () => {
       .then(() => console.log('Service Worker Registered for scope:', swURL.href))
       .catch(err => console.error('Service Worker Error:', err));
   }
-
-  // ===== Initial Load Check =====
-  if (auth.currentUser) loadBooks();
 });
