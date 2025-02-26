@@ -19,3 +19,13 @@ Includes a manifest and service worker for offline support and installability.
 
 Responsive Design:
 Optimized for both desktop and mobile devices
+
+Deployment:
+
+The app is deployed via GitHub Pages.
+Ensure your service worker and asset paths are correctly configured for production.
+Push your changes to GitHub, and the live site will update automatically.
+Live Site
+Check out the live version of the app here:
+https://samar-deep.github.io/Booklogs
+
