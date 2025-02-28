@@ -141,7 +141,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ===== Biometric Registration (WebAuthn) =====
   bioRegisterBtn.addEventListener("click", async () => {
-    // For demo purposes: In production, generate a secure challenge on your server.
+  
     const publicKeyCredentialCreationOptions = {
       challenge: Uint8Array.from("randomChallengeForReg", c => c.charCodeAt(0)),
       rp: {
@@ -179,7 +179,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ===== Biometric Authentication (WebAuthn) =====
   bioAuthBtn.addEventListener("click", async () => {
-    // For demo purposes: In production, generate a secure challenge and list allowed credentials from your server.
+    
     const publicKeyCredentialRequestOptions = {
       challenge: Uint8Array.from("randomChallengeForAuth", c => c.charCodeAt(0)),
       timeout: 60000,
